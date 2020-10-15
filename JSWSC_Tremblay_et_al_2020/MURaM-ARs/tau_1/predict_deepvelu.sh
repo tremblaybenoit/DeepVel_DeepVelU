@@ -1,0 +1,1 @@
+python predict_deepvelu.py -i input.fits -o output/deepvelu_output.fits -bx1 0 -bx2 0 -by1 0 -by2 0 -norm_simulation 0 -norm_filename 'network/simulation_properties.npz' -n 'network/deepvelu_weights.hdf5' &
