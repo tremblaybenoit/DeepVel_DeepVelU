@@ -168,10 +168,10 @@ class train_deepvel(object):
         self.vy_d_1000km_var = tmp['vy_d_1000km_var']
         self.vy_d_1000km_median = tmp['vy_d_1000km_median']
         self.vy_d_1000km_stddev = tmp['vy_d_1000km_stddev']
-            
+
     def define_network(self):
         print("Setting up network...")
-    
+
         inputs = Input(shape=(self.nx, self.ny, self.n_inputs))
 
         x = inputs
@@ -256,20 +256,20 @@ class train_deepvel(object):
 
         final = Conv2D(self.n_components, (1, 1), strides=(1, 1), padding='same',
                        kernel_initializer='he_normal', activation='linear')(upconv1)
-    
+
         self.model = Model(inputs=inputs, outputs=final)
-    
+
         json_string = self.model.to_json()
         f = open('{0}_model.json'.format(self.root), 'w')
         f.write(json_string)
         f.close()
 
-    def compile_network(self):        
+    def compile_network(self):
         self.model.compile(loss='mse', optimizer=Adam(lr=1e-4))
-        
+
     def read_network(self):
         print("Reading previous network...")
-                
+
         f = open('{0}_model.json'.format(self.root), 'r')
         json_string = f.read()
         f.close()
@@ -279,11 +279,11 @@ class train_deepvel(object):
 
     def train(self, n_iterations):
         print("Training network...")
-    
+
         # Callbacks
         self.checkpointer = ModelCheckpoint(filepath="{0}_weights.hdf5".format(self.root), verbose=1,
                                             save_best_only=True)
-        
+
         # Load loss History
         n_val_loss = 0
         if self.option == 'continue':
@@ -329,6 +329,10 @@ class train_deepvel(object):
                                     self.vx_tau_0001_min) / (self.vx_tau_0001_max - self.vx_tau_0001_min)
         output_train[:, :, :, 1] = (output_train[:, :, :, 1] -
                                     self.vy_tau_0001_min) / (self.vy_tau_0001_max - self.vy_tau_0001_min)
+        output_valid[:, :, :, 0] = (output_valid[:, :, :, 0] -
+                                    self.vx_tau_0001_min) / (self.vx_tau_0001_max - self.vx_tau_0001_min)
+        output_valid[:, :, :, 1] = (output_valid[:, :, :, 1] -
+                                    self.vy_tau_0001_min) / (self.vy_tau_0001_max - self.vy_tau_0001_min)
 
         # Training process
         self.model.fit(input_train, output_train, batch_size=self.batch_size, epochs=n_iterations, verbose=1,
@@ -354,7 +358,7 @@ class train_deepvel(object):
 
 
 if __name__ == '__main__':
-    
+
     parser = argparse.ArgumentParser(description='Train DeepVel')
     parser.add_argument('-o', '--out', help='Output files')
     parser.add_argument('-e', '--epochs', help='Number of epochs', default=10)
@@ -364,21 +368,21 @@ if __name__ == '__main__':
                         help='File containing the simulation properties for normalization',
                         default='network/simulation_properties.npz')
     parsed = vars(parser.parse_args())
-    
+
     root = parsed['out']
     nEpochs = int(parsed['epochs'])
     option = parsed['action']
     noise = parsed['noise']
     norm_filename = parsed['properties']
-    
+
     out = train_deepvel(root, noise, option, norm_filename)
-    
+
     if option == 'start':
         out.define_network()
-    
+
     if option == 'continue':
         out.read_network()
-    
+
     if option == 'start' or option == 'continue':
         out.compile_network()
         out.train(nEpochs)
