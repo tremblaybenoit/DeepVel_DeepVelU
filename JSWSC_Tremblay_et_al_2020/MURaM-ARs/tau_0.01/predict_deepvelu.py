@@ -15,36 +15,36 @@ if platform.node() != 'vena':
 
 
 class deepvel(object):
-    
+
     def __init__(self, observations, output, border_x1=0, border_x2=0, border_y1=0, border_y2=0, norm_simulation=0,
                  norm_filename='network/simulation_properties.npz', network_weights='network/deepvelu_weights.hdf5'):
         """
         ---------
         Keywords:
         ---------
-        
+
         observations: Input array of shape (nx, ny, n_times*n_inputs) where
                         nx & ny: Image dimensions
                         n_times: Number of consecutive timesteps
                         n_inputs: Number of types of inputs
-        
+
         output: Output array of dimensions (nx, ny, n_depths*n_comp) where
                         nx & ny: Image dimensions
                         n_depths: Number of optical/geometrical depths to infer
                         n_comp: Number of components of the velocity vector to infer
-        
+
         border: Number of pixels to crop from the image in each direction
                         border_x1: Number of pixels to remove from the left of the image
                         border_x2: Number of pixels to remove from the right of the image
                         border_y1: Number of pixels to remove from the bottom of the image
                         border_y2: Number of pixels to remove from the top of the image
-                        
+
         same_as_training: Set to 1 if using data from the same simulation as the one used for training.
                             -> The inputs will be normalized using the same values as the inputs in the
                                 training set because the values are known.
-                                
+
         network: Provide path to the network weights and normalization values
-        
+
         """
 
         # GPU
@@ -59,7 +59,7 @@ class deepvel(object):
             except RuntimeError as e:
                 # Memory growth must be set before GPUs have been initialized
                 print(e)
-        
+
         # -----------------
         # Input properties:
         # -----------------
@@ -81,7 +81,7 @@ class deepvel(object):
         self.border_y2 = border_y2
         self.nx = nx - self.border_x1 - self.border_x2
         self.ny = ny - self.border_y1 - self.border_y2
-        
+
         # ------------------
         # Output properties:
         # ------------------
@@ -92,7 +92,7 @@ class deepvel(object):
         # Number of inferred velocity components
         self.n_comp = 2
         self.n_outputs = self.n_depths*self.n_comp
-        
+
         # -----------------
         # Network properties:
         # -----------------
@@ -104,7 +104,7 @@ class deepvel(object):
         self.n_conv_layers = 20
         # Number of batches
         self.batch_size = 1
-        
+
         # --------------------
         # Test set properties:
         # --------------------
@@ -184,10 +184,10 @@ class deepvel(object):
         self.vy_d_1000km_var = tmp['vy_d_1000km_var']
         self.vy_d_1000km_median = tmp['vy_d_1000km_median']
         self.vy_d_1000km_stddev = tmp['vy_d_1000km_stddev']
-            
+
     def define_network(self):
         print("Setting up network...")
-    
+
         inputs = Input(shape=(self.nx, self.ny, self.n_inputs))
 
         x = inputs
@@ -265,17 +265,17 @@ class deepvel(object):
 
         final = Conv2D(self.n_outputs, (1, 1), strides=(1, 1), padding='same',
                        kernel_initializer='he_normal', activation='linear')(upconv1)
-    
+
         self.model = Model(inputs=inputs, outputs=final)
         self.model.load_weights(self.weights_filename)
-    
+
     def predict(self):
         print("Predicting velocities with DeepVel...")
 
         # Input and output arrays
         inputs = np.zeros((self.batch_size, self.nx, self.ny, self.n_inputs), dtype='float32')
         outputs = np.zeros((self.n_frames, self.nx, self.ny, self.n_outputs), dtype='float32')
-        
+
         # Normalization of the input data:
         # If keyword is set, we use the median of the continuum intensity at tau = 1 as computed from
         # the training simulation. Otherwise, we compute the median from the input data.
@@ -293,10 +293,10 @@ class deepvel(object):
             inputs[:, :, :, 1] = self.observations[i * self.batch_size + 1:(i + 1) * self.batch_size + 1,
                                                    self.border_x1:self.border_x1 + self.nx,
                                                    self.border_y1:self.border_y1 + self.ny] / self.ic_tau_1_median
-        
-            outputs[i, :, :, :] = self.model.predict(input_validation, batch_size=self.batch_size, max_queue_size=1,
+
+            outputs[i, :, :, :] = self.model.predict(inputs, batch_size=self.batch_size, max_queue_size=1,
                                                      verbose=1)
-        
+
         # Computation time (end)
         end = time.time()
         print("Prediction took {0} seconds...".format(end - start))
@@ -304,18 +304,18 @@ class deepvel(object):
         # Output data is normalized -> Reverse process
         outputs[:, :, :, 0] = outputs[:, :, :, 0] * (self.vx_tau_001_max - self.vx_tau_001_min) + self.vx_tau_001_min
         outputs[:, :, :, 1] = outputs[:, :, :, 1] * (self.vy_tau_001_max - self.vy_tau_001_min) + self.vy_tau_001_min
-        
+
         # Save inferred flows in a .fits file
         # Format: (self.n_frames, self.border_x1:self.border_x1 + self.nx, self.border_y1:self.border_y1 + self.ny,
         #          self.n_outputs)
-        hdu = fits.PrimaryHDU(output)
+        hdu = fits.PrimaryHDU(outputs)
         hdulist = fits.HDUList([hdu])
         hdulist.writeto(self.output_filename, overwrite=True)
 
 
 # Main
 if __name__ == '__main__':
-    
+
     # Input parameters/keywords
     parser = argparse.ArgumentParser(description='DeepVel prediction')
     parser.add_argument('-o', '--out', help='Output file')
@@ -332,11 +332,11 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--network', help='Path to network weights and normalization values',
                         default='network/deepvelu_weights.hdf5')
     parsed = vars(parser.parse_args())
-    
+
     # Open file with observations and read
     f = fits.open(parsed['in'])
     imgs = f[0].data
-    
+
     # Initialization
     out = deepvel(imgs, parsed['out'],
                   border_x1=int(parsed['border_x1']),
@@ -346,7 +346,7 @@ if __name__ == '__main__':
                   norm_simulation=int(parsed['normalization_simulation']),
                   norm_filename=parsed['normalization_filename'],
                   network_weights=parsed['network'])
-    
+
     # Neural network architecture
     out.define_network()
     # Make predictions
