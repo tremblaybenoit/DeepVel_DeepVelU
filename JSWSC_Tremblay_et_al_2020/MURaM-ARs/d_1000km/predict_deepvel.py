@@ -5,8 +5,8 @@ import time
 import argparse
 from astropy.io import fits
 import tensorflow as tf
-from keras.layers import Input, Conv2D, Activation, BatchNormalization, add
-from keras.models import Model
+from tensorflow.keras.layers import Input, Conv2D, Activation, BatchNormalization, add
+from tensorflow.keras.models import Model
 
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
@@ -243,7 +243,7 @@ class deepvel(object):
             inputs[:, :, :, 1] = self.observations[i * self.batch_size + 1:(i + 1) * self.batch_size + 1,
                                                    self.border_x1:self.border_x1 + self.nx,
                                                    self.border_y1:self.border_y1 + self.ny] / self.ic_tau_1_median
-        
+
             outputs[i, :, :, :] = self.model.predict(inputs, batch_size=self.batch_size, max_queue_size=1,
                                                      verbose=1)
 

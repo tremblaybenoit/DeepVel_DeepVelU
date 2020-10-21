@@ -5,8 +5,8 @@ import time
 import argparse
 from astropy.io import fits
 import tensorflow as tf
-from keras.layers import Input, Conv2D, Activation, BatchNormalization, add
-from keras.models import Model
+from tensorflow.keras.layers import Input, Conv2D, Activation, BatchNormalization, add
+from tensorflow.keras.models import Model
 
 os.environ["KERAS_BACKEND"] = "tensorflow"
 

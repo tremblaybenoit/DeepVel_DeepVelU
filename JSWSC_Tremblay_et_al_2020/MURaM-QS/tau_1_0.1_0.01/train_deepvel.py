@@ -4,11 +4,11 @@ import argparse
 import json
 import h5py
 import csv
-from keras.layers import Input, Conv2D, Activation, BatchNormalization, add
-from keras.callbacks import ModelCheckpoint, Callback, CSVLogger
-from keras.models import Model, model_from_json
-from keras.optimizers import Adam
 import tensorflow as tf
+from tensorflow.keras.layers import Input, Conv2D, Activation, BatchNormalization, add
+from tensorflow.keras.callbacks import ModelCheckpoint, Callback, CSVLogger
+from tensorflow.keras.models import Model, model_from_json
+from tensorflow.keras.optimizers import Adam
 
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
@@ -185,7 +185,7 @@ class train_deepvel(object):
         '''
 
     def residual(self, inputs):
-    
+
         x = Conv2D(self.n_filters, (self.kernel_size, self.kernel_size), strides=(1, 1), padding='same',
                    kernel_initializer='he_normal')(inputs)
         x = BatchNormalization()(x)
@@ -194,41 +194,41 @@ class train_deepvel(object):
                    kernel_initializer='he_normal')(x)
         x = BatchNormalization()(x)
         x = add([x, inputs])
-    
+
         return x
 
     def define_network(self):
         print("Setting up network...")
-    
+
         inputs = Input(shape=(self.nx, self.ny, self.n_inputs))
         conv = Conv2D(self.n_filters, (self.kernel_size, self.kernel_size), strides=(1, 1), padding='same',
                       kernel_initializer='he_normal', activation='relu')(inputs)
-    
+
         x = self.residual(conv)
         for i in range(self.n_conv_layers):
             x = self.residual(x)
-    
+
         x = Conv2D(self.n_filters, (self.kernel_size, self.kernel_size), strides=(1, 1), padding='same',
                    kernel_initializer='he_normal')(x)
         x = BatchNormalization()(x)
         x = add([x, conv])
-    
+
         final = Conv2D(self.n_outputs, (1, 1), strides=(1, 1), padding='same',
                        kernel_initializer='he_normal', activation='linear')(x)
-    
+
         self.model = Model(inputs=inputs, outputs=final)
-    
+
         json_string = self.model.to_json()
         f = open('{0}_model.json'.format(self.root), 'w')
         f.write(json_string)
         f.close()
 
-    def compile_network(self):        
+    def compile_network(self):
         self.model.compile(loss='mse', optimizer=Adam(lr=1e-4))
-        
+
     def read_network(self):
         print("Reading previous network...")
-                
+
         f = open('{0}_model.json'.format(self.root), 'r')
         json_string = f.read()
         f.close()
@@ -238,11 +238,11 @@ class train_deepvel(object):
 
     def train(self, n_iterations):
         print("Training network...")
-    
+
         # Callbacks
         self.checkpointer = ModelCheckpoint(filepath="{0}_weights.hdf5".format(self.root), verbose=1,
                                             save_best_only=True)
-        
+
         # Load loss History
         n_val_loss = 0
         if self.option == 'continue':
@@ -333,7 +333,7 @@ class train_deepvel(object):
 
 
 if __name__ == '__main__':
-    
+
     parser = argparse.ArgumentParser(description='Train DeepVel')
     parser.add_argument('-o', '--out', help='Output files')
     parser.add_argument('-e', '--epochs', help='Number of epochs', default=10)
@@ -343,21 +343,21 @@ if __name__ == '__main__':
                         help='File containing the simulation properties for normalization',
                         default='network/simulation_properties.npz')
     parsed = vars(parser.parse_args())
-    
+
     root = parsed['out']
     nEpochs = int(parsed['epochs'])
     option = parsed['action']
     noise = parsed['noise']
     norm_filename = parsed['properties']
-    
+
     out = train_deepvel(root, noise, option, norm_filename)
-    
+
     if option == 'start':
         out.define_network()
-    
+
     if option == 'continue':
         out.read_network()
-    
+
     if option == 'start' or option == 'continue':
         out.compile_network()
         out.train(nEpochs)

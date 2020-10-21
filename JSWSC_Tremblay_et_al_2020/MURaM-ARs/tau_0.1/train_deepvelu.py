@@ -4,11 +4,11 @@ import argparse
 import json
 import h5py
 import csv
-from keras.layers import Input, Conv2D, Activation, BatchNormalization, Concatenate, Dropout, UpSampling2D, add
-from keras.callbacks import ModelCheckpoint, Callback, CSVLogger
-from keras.models import Model, model_from_json
-from keras.optimizers import Adam
 import tensorflow as tf
+from tensorflow.keras.layers import Input, Conv2D, Activation, BatchNormalization, Concatenate, Dropout, UpSampling2D, add
+from tensorflow.keras.callbacks import ModelCheckpoint, Callback, CSVLogger
+from tensorflow.keras.models import Model, model_from_json
+from tensorflow.keras.optimizers import Adam
 
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
