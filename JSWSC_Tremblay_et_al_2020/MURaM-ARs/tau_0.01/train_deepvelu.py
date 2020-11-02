@@ -70,7 +70,6 @@ class train_deepvel(object):
         # Architecture
         self.n_filters = 64
         self.kernel_size = 3
-        self.n_conv_layers = 20
         self.noise_level = noise
         # Number of batches
         self.batch_size = 10
