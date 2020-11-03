@@ -253,7 +253,7 @@ class train_deepvel(object):
         upconv1 = Activation('relu')(upconv1)
         upconv1 = Dropout(0.5)(upconv1)
 
-        final = Conv2D(self.n_components, (1, 1), strides=(1, 1), padding='same',
+        final = Conv2D(self.n_outputs, (1, 1), strides=(1, 1), padding='same',
                        kernel_initializer='he_normal', activation='linear')(upconv1)
 
         self.model = Model(inputs=inputs, outputs=final)
